@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
 
 
@@ -25,12 +25,15 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-class User(AbstractUser):
-    username = None
+class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True, verbose_name='Электронная почта')
-    avatar = models.ImageField(upload_to='users/avatars/', blank=True, null=True, verbose_name='Аватар')
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name='Номер телефона')
-    country = models.CharField(max_length=100, blank=True, null=True, verbose_name='Страна')
+    city = models.CharField(max_length=100, blank=True, null=True, verbose_name='Город')
+    avatar = models.ImageField(upload_to='users/avatars/', blank=True, null=True, verbose_name='Аватар')
+
+    is_active = models.BooleanField(default=True, verbose_name='Активен')
+    is_staff = models.BooleanField(default=False, verbose_name='Сотрудник')
+    date_joined = models.DateTimeField(auto_now_add=True, verbose_name='Дата регистрации')
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
