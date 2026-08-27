@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from .models import Course, Lesson
+from .validators import YoutubeUrlValidator
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -8,7 +9,8 @@ class LessonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lesson
-        fields = '__all__'
+        fields = '__all__',
+        validators = [YoutubeUrlValidator(field='video_link')]
 
     def get_course(self, obj):
         return obj.course.title
