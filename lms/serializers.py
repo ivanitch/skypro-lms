@@ -5,7 +5,7 @@ from .validators import YoutubeUrlValidator
 
 
 class LessonSerializer(serializers.ModelSerializer):
-    course = serializers.SerializerMethodField()
+    course = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all())
 
     class Meta:
         model = Lesson
