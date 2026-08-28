@@ -162,4 +162,6 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-PER_PAGE = int(os.getenv('PER_PAGE', 15))
+PAGE_SIZE = int(os.getenv('PER_PAGE', 15))
+
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')

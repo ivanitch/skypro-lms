@@ -10,6 +10,7 @@ from .serializers import (
     UserProfileSerializer,
     UserRegisterSerializer,
 )
+from .services import create_stripe_product, create_stripe_price, create_stripe_session
 
 
 class UserCreateAPIView(CreateAPIView):
@@ -44,3 +45,32 @@ class PaymentListAPIView(ListAPIView):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['paid_course', 'paid_lesson', 'payment_method']
     ordering_fields = ['payment_date', 'amount']
+
+
+class PaymentCreateAPIView(CreateAPIView):
+    serializer_class = PaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        # 0. Сохраняем платеж, чтобы получить к нему доступ
+        payment = serializer.save(user=self.request.user)
+
+        # 1. Определяем название продукта (курс или урок)
+        if payment.paid_course:
+            product_name = payment.paid_course.title
+        elif payment.paid_lesson:
+            product_name = payment.paid_lesson.title
+        else:
+            product_name = 'Неизвестный продукт'
+
+        # 2. Создаем продукт
+        product = create_stripe_product(product_name)
+        # 3. Создаем цену
+        price = create_stripe_price(payment.amount, product.id)
+        # 4. Создаем сессию
+        session_id, payment_link = create_stripe_session(price.id)
+
+        # 5. Обновляем платеж полученными данными
+        payment.session_id = session_id
+        payment.link = payment_link
+        payment.save()

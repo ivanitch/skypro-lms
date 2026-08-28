@@ -16,4 +16,5 @@ dependencies = [
     "pillow>=12.3.0",
     "psycopg>=3.3.4",
     "python-dotenv>=1.2.2",
+    "stripe>=15.6.0",
 ]
