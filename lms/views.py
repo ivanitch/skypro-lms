@@ -77,6 +77,12 @@ class SubscriptionAPIView(APIView):
     """Эндпоинт управления подпиской на курс."""
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Управление подпиской",
+        description="Добавляет или удаляет подписку пользователя на указанный курс.",
+        request={'type': 'object', 'properties': {'course_id': {'type': 'integer'}}},
+        responses={200: {'type': 'object', 'properties': {'message': {'type': 'string'}}}}
+    )
     def post(self, request, *args, **kwargs):
         user = request.user
         course_id = request.data.get('course_id')
