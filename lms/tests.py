@@ -1,8 +1,10 @@
+from unittest.mock import patch
+
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from users.models import User
+from users.models import User, Payment
 from .models import Course, Lesson, Subscription
 
 
@@ -106,3 +108,42 @@ class LMSAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'подписка удалена')
         self.assertFalse(Subscription.objects.filter(user=self.user, course=self.course).exists())
+
+
+class PaymentStripeAPITestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='stripeuser@test.com', password='password123')
+        self.course = Course.objects.create(
+            title='Stripe Course',
+            description='Test Stripe',
+            owner=self.user
+        )
+        self.client.force_authenticate(user=self.user)
+
+    @patch('users.views.create_stripe_session')  # Патчим функцию сервиса, вызываемую во views.py
+    def test_payment_create_with_stripe(self, mock_create_stripe_session):
+        """Тест создания платежа и генерации ссылки Stripe."""
+        mock_create_stripe_session.return_value = (
+            'cs_test_a1b2c3',
+            'https://checkout.stripe.com/pay/cs_test_a1b2c3'
+        )
+
+        url = reverse('users:payment-create')
+        data = {
+            'amount': '1500.00',
+            'payment_method': 'transfer',
+            'paid_course': self.course.pk
+        }
+
+        response = self.client.post(url, data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['session_id'], 'cs_test_a1b2c3')
+        self.assertEqual(response.data['link'], 'https://checkout.stripe.com/pay/cs_test_a1b2c3')
+
+        # Проверяем, что наша замокированная функция вызывалась ровно 1 раз
+        mock_create_stripe_session.assert_called_once()
+
+        payment = Payment.objects.get(session_id='cs_test_a1b2c3')
+        self.assertEqual(payment.paid_course, self.course)
+        self.assertEqual(payment.user, self.user)
