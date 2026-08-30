@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from datetime import timedelta
+
 from .models import Course, Lesson, Subscription
 from .paginators import CustomPagination
 from .permissions import IsModerator, IsOwner
@@ -23,6 +25,24 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        now = timezone.now()
+
+        # Проверяем, обновлялся ли курс более 4 часов назад
+        # Если updated_at не установлено или разница > 4 часов — запускаем рассылку
+        should_notify = (
+                instance.updated_at is None or
+                (now - instance.updated_at) > timedelta(hours=4)
+        )
+
+        # Сохраняем обновленный объект
+        course = serializer.save(updated_at=now)
+
+        # Вызываем задачу строго после успешной фиксации транзакции БД
+        if should_notify:
+            transaction.on_commit(lambda: send_course_update_email.delay(course.id))
 
     def get_permissions(self):
         if self.action == 'create':
